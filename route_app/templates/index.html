@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>避ける位置付き 経路探索</title>
+</head>
+<body>
+    <h2>避ける位置付き 経路探索アプリ</h2>
+
+    <form action="/route" method="post">
+        <h3>出発地</h3>
+        緯度: <input type="text" name="start_lat" value="36.4253"><br>
+        経度: <input type="text" name="start_lon" value="139.0527"><br><br>
+
+        <h3>目的地</h3>
+        緯度: <input type="text" name="end_lat" value="36.3894"><br>
+        経度: <input type="text" name="end_lon" value="139.0636"><br><br>
+
+        <h3>避けるエリア</h3>
+        緯度: <input type="text" name="avoid_lat" value="36.4050"><br>
+        経度: <input type="text" name="avoid_lon" value="139.0600"><br>
+        半径（m）: <input type="text" name="avoid_radius" value="300"><br><br>
+
+        <input type="submit" value="経路を探索">
+    </form>
+</body>
+</html>
+
