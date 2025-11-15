@@ -1,0 +1,6 @@
+flask>=2.0.0
+osmnx>=1.2.0
+networkx>=2.8
+folium>=0.12.0
+shapely>=2.0.0
+
