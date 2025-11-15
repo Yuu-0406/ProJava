@@ -3,9 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <title>探索結果</title>
+    <style>
+        .route-info {
+            background-color: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .route-info h3 {
+            margin-top: 0;
+        }
+        .route-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .route-info td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .route-info td:first-child {
+            font-weight: bold;
+            width: 200px;
+        }
+        .route-comparison {
+            display: flex;
+            gap: 20px;
+            margin: 15px 0;
+        }
+        .route-box {
+            flex: 1;
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid;
+        }
+        .route-box.original {
+            border-color: blue;
+            background-color: #e3f2fd;
+        }
+        .route-box.avoid {
+            border-color: red;
+            background-color: #ffebee;
+        }
+        .route-box h4 {
+            margin-top: 0;
+        }
+        .distance {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
     <h2>探索結果</h2>
+    
+    {% if route_info %}
+    <div class="route-info">
+        <h3>経路情報</h3>
+        <div class="route-comparison">
+            {% if route_info.original_distance_km %}
+            <div class="route-box original">
+                <h4 style="color: blue;">元の最短経路</h4>
+                <div class="distance" style="color: blue;">{{ "%.2f"|format(route_info.original_distance_km) }} km</div>
+            </div>
+            {% endif %}
+            <div class="route-box avoid">
+                <h4 style="color: red;">回避経路</h4>
+                <div class="distance" style="color: red;">{{ "%.2f"|format(route_info.avoid_distance_km) }} km</div>
+            </div>
+        </div>
+        <p><strong>回避した道路数:</strong> {{ route_info.avoid_edges_count }} 本</p>
+        {% if route_info.original_distance_km %}
+        <p><strong>距離の差:</strong> {{ "%.2f"|format(route_info.avoid_distance_km - route_info.original_distance_km) }} km 
+           ({{ "%.1f"|format((route_info.avoid_distance_km / route_info.original_distance_km - 1) * 100) }}% 増加)</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    
     {{ m | safe }}
     <br>
     <a href="/select_road">戻る</a>

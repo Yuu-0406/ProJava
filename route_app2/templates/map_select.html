@@ -9,11 +9,19 @@
 </head>
 <body>
     <h3>回避したい道路をクリックしてください（複数可）</h3>
+    <p style="color: #666; font-size: 14px;">
+        ※ 緑色の最短経路は選択できません。青色の道路をクリックして選択/解除してください。<br>
+        ※ 同じ道路を再度クリックすると選択が解除されます。
+    </p>
 
-    <form action="/route" method="post">
+    <form action="/route" method="post" id="route-form">
+        <h3>現在地</h3>
+        緯度: <input type="text" name="start_lat" value="{{ start_lat }}" readonly><br>
+        経度: <input type="text" name="start_lon" value="{{ start_lon }}" readonly><br><br>
         <h3>目的地</h3>
-        緯度: <input type="text" name="end_lat" value="36.3894"><br>
-        経度: <input type="text" name="end_lon" value="139.0636"><br><br>
+        緯度: <input type="text" name="end_lat" value="{{ end_lat }}"><br>
+        経度: <input type="text" name="end_lon" value="{{ end_lon }}"><br><br>
+        <input type="hidden" name="avoid_edges" id="avoid_edges_input" value="">
         <input type="submit" value="経路を計算">
     </form>
 
@@ -21,29 +29,201 @@
 
     <script>
         let avoid_edges = []; // 選択した道路IDを配列で保持
-
-        setTimeout(() => {
-            document.querySelectorAll(".leaflet-interactive").forEach(layer => {
-                layer.addEventListener("click", function() {
-                    const eid = this.getAttribute("data-edge-id");
-                    if (eid && !avoid_edges.includes(eid)) {
-                        avoid_edges.push(eid);       // 配列に追加
-                        this.style.stroke = "red";   // 即時反映
-                        console.log("回避リンク追加:", eid);
+        
+        // hidden inputを取得（HTMLに直接記述されている）
+        const form = document.querySelector("#route-form");
+        let hiddenInput = document.getElementById("avoid_edges_input");
+        
+        if (!hiddenInput) {
+            // フォールバック: 存在しない場合は作成
+            hiddenInput = document.createElement("input");
+            hiddenInput.type = "hidden";
+            hiddenInput.name = "avoid_edges";
+            hiddenInput.id = "avoid_edges_input";
+            hiddenInput.value = "";
+            form.appendChild(hiddenInput);
+        }
+        
+        // 選択状態を更新する関数
+        function updateHiddenInput() {
+            hiddenInput.value = avoid_edges.join(",");
+            console.log("hidden input更新:", hiddenInput.value);
+        }
+        
+        // エッジクリックを処理するグローバル関数
+        window.handleEdgeClick = function(edgeId, isRouteEdge, layer) {
+            console.log("=== handleEdgeClick 呼び出し ===");
+            console.log("edgeId:", edgeId);
+            console.log("isRouteEdge:", isRouteEdge);
+            console.log("layer:", layer);
+            console.log("avoid_edges (現在):", avoid_edges);
+            
+            // 最短経路のエッジは選択対象外
+            if (isRouteEdge) {
+                console.log("最短経路のエッジは選択できません:", edgeId);
+                alert("最短経路の道路は選択できません");
+                return;
+            }
+            
+            if (!edgeId) {
+                console.log("edgeIdがありません");
+                alert("エッジIDが取得できませんでした");
+                return;
+            }
+            
+            // 選択/解除のトグル
+            const index = avoid_edges.indexOf(edgeId);
+            console.log("現在のindex:", index);
+            
+            if (index === -1) {
+                // 選択されていない場合は追加
+                avoid_edges.push(edgeId);
+                console.log("回避リンク追加:", edgeId);
+                
+                // レイヤーのスタイルを変更
+                if (layer) {
+                    try {
+                        layer.setStyle({
+                            color: 'red',
+                            weight: 6,
+                            opacity: 1.0
+                        });
+                        console.log("レイヤーのスタイルを変更しました");
+                    } catch (e) {
+                        console.error("スタイル変更エラー:", e);
                     }
-                });
-            });
+                } else {
+                    // レイヤーオブジェクトがない場合、DOM要素から直接スタイルを変更
+                    console.warn("レイヤーオブジェクトがありません。DOM要素から直接変更します");
+                    try {
+                        // エッジIDに対応するパス要素を検索
+                        const paths = document.querySelectorAll('svg path.leaflet-interactive');
+                        paths.forEach(function(path) {
+                            const pathEdgeId = path.getAttribute('data-edge-id');
+                            if (pathEdgeId === edgeId) {
+                                path.style.stroke = 'red';
+                                path.style.strokeWidth = '6px';
+                                path.style.opacity = '1.0';
+                            }
+                        });
+                    } catch (e) {
+                        console.error("DOM要素のスタイル変更エラー:", e);
+                    }
+                }
+                
+                console.log("現在の配列:", avoid_edges);
+            } else {
+                // 既に選択されている場合は解除
+                avoid_edges.splice(index, 1);
+                console.log("回避リンク解除:", edgeId);
+                
+                // レイヤーのスタイルを元に戻す
+                if (layer) {
+                    try {
+                        layer.setStyle({
+                            color: 'blue',
+                            weight: 4,
+                            opacity: 0.7
+                        });
+                        console.log("レイヤーのスタイルを元に戻しました");
+                    } catch (e) {
+                        console.error("スタイル変更エラー:", e);
+                    }
+                } else {
+                    // レイヤーオブジェクトがない場合、DOM要素から直接スタイルを変更
+                    try {
+                        const paths = document.querySelectorAll('svg path.leaflet-interactive');
+                        paths.forEach(function(path) {
+                            const pathEdgeId = path.getAttribute('data-edge-id');
+                            if (pathEdgeId === edgeId) {
+                                path.style.stroke = 'blue';
+                                path.style.strokeWidth = '4px';
+                                path.style.opacity = '0.7';
+                            }
+                        });
+                    } catch (e) {
+                        console.error("DOM要素のスタイル変更エラー:", e);
+                    }
+                }
+                
+                console.log("現在の配列:", avoid_edges);
+            }
+            
+            // 選択状態を表示
+            updateSelectionInfo();
+            // hidden inputを更新
+            updateHiddenInput();
+            
+            console.log("=== handleEdgeClick 完了 ===");
+        };
+        
+        // 関数が定義されたことを確認
+        console.log("handleEdgeClick関数を定義しました");
 
-            // フォーム送信時に配列を hidden input に入れる
-            const form = document.querySelector("form");
-            form.addEventListener("submit", function(e) {
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = "avoid_edges";
-                input.value = avoid_edges.join(","); // カンマ区切りで送信
-                form.appendChild(input);
+        // 選択状態の情報を更新
+        function updateSelectionInfo() {
+            let infoDiv = document.getElementById("selection-info");
+            if (!infoDiv) {
+                infoDiv = document.createElement("div");
+                infoDiv.id = "selection-info";
+                infoDiv.style.cssText = "position: fixed; top: 10px; right: 10px; background: white; padding: 10px; border: 2px solid #333; border-radius: 5px; z-index: 10000; max-width: 300px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);";
+                document.body.appendChild(infoDiv);
+            }
+            let content = `<strong>選択中の道路:</strong> ${avoid_edges.length} 本`;
+            if (avoid_edges.length > 0) {
+                if (avoid_edges.length <= 5) {
+                    content += `<br><small>${avoid_edges.join(", ")}</small>`;
+                } else {
+                    content += `<br><small>${avoid_edges.slice(0, 3).join(", ")} ... 他${avoid_edges.length - 3}本</small>`;
+                }
+            } else {
+                content += "<br><small style='color: #999;'>なし</small>";
+            }
+            infoDiv.innerHTML = content;
+        }
+
+        // 初期表示
+        updateSelectionInfo();
+        updateHiddenInput();
+
+        // フォーム送信時の確認
+        form.addEventListener("submit", function(e) {
+            // 送信前にhidden inputを確実に更新
+            const valueToSend = avoid_edges.join(",");
+            hiddenInput.value = valueToSend;
+            
+            // hidden inputがフォーム内に存在するか確認
+            if (!form.contains(hiddenInput)) {
+                console.warn("hidden inputがフォーム内に存在しません。再追加します。");
+                form.appendChild(hiddenInput);
+            }
+            
+            // 送信前の最終確認
+            console.log("=== フォーム送信 ===");
+            console.log("送信前の選択状態:", avoid_edges);
+            console.log("送信前の配列長:", avoid_edges.length);
+            console.log("送信する値:", hiddenInput.value);
+            console.log("hidden input要素:", hiddenInput);
+            console.log("hidden inputの値の長さ:", hiddenInput.value.length);
+            console.log("hidden inputがフォーム内にあるか:", form.contains(hiddenInput));
+            
+            // フォーム内のすべてのinput要素を確認
+            const allInputs = form.querySelectorAll("input");
+            console.log("フォーム内の全input要素:");
+            allInputs.forEach((input, index) => {
+                console.log(`  [${index}] name="${input.name}", value="${input.value}", type="${input.type}"`);
             });
-        }, 800);
+            
+            // 送信前に確認（警告のみ、送信は継続）
+            if (avoid_edges.length === 0) {
+                console.warn("警告: 回避道路が選択されていません。元の最短経路が表示されます。");
+            } else {
+                console.log(`✓ ${avoid_edges.length}本の道路を回避して経路を計算します`);
+                console.log("送信するエッジID:", avoid_edges);
+            }
+            
+            // フォームは通常通り送信される（hidden inputは既に更新済み）
+        });
     </script>
 </body>
 </html>
